@@ -4,7 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import dotenv from "dotenv";
 
-import questionRoutes from "./routes/fetchQuestions.route";
+import questionRoutes from "./routes/profile.route";
 
 dotenv.config();
 

@@ -3,25 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Test</title>
+    <title>Complete Profile Analysis Test</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
         }
         button {
             background: #007bff;
             color: white;
             border: none;
-            padding: 10px 15px;
+            padding: 12px 20px;
             cursor: pointer;
             margin: 10px 5px;
-            border-radius: 4px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background 0.3s;
         }
         button:hover {
             background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
         .result {
             background: #f8f9fa;
@@ -30,12 +49,10 @@
             margin: 10px 0;
             border-radius: 4px;
             white-space: pre-wrap;
-        }
-        input, select {
-            margin: 5px;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
         }
         .form-group {
             margin: 15px 0;
@@ -44,99 +61,210 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
+            color: #555;
+        }
+        input, select, textarea {
+            width: 100%;
+            margin: 5px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .file-input {
+            border: 2px dashed #007bff;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .file-input:hover {
+            background: #e9ecef;
+        }
+        .success {
+            color: #28a745;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+        .status.pending { background: #fff3cd; color: #856404; }
+        .status.complete { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+        .checkbox-item input {
+            width: auto;
+            margin-right: 5px;
         }
     </style>
 </head>
 <body>
-    <h1>API Test Page</h1>
+    <h1>🚀 Complete Profile Analysis Test Suite</h1>
     
-    <!-- Test Get Questions -->
-    <div>
-        <h2>1. Test Get Questions</h2>
-        <button onclick="testGetQuestions()">Get Questions</button>
-        <div id="questionsResult" class="result"></div>
+    <!-- Flow Status -->
+    <div class="section">
+        <h2>📊 Flow Status</h2>
+        <div id="flowStatus">
+            <div id="step1Status" class="status pending">Step 1: Answer Questions - Pending</div>
+            <div id="step2Status" class="status pending">Step 2: Upload Resume - Pending</div>
+            <div id="step3Status" class="status pending">Step 3: Generate Dynamic Questions - Pending</div>
+        </div>
     </div>
 
-    <!-- Test Submit Answers -->
-    <div>
-        <h2>2. Test Submit Answers</h2>
-        <form id="answersForm">
-            <div class="form-group">
-                <label>Primary Focus:</label>
-                <select name="track">
-                    <option value="">Select...</option>
-                    <option value="faang">FAANG Track</option>
-                    <option value="startup">Startup Track</option>
-                    <option value="both">Both</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Skill Level:</label>
-                <select name="skillLevel">
-                    <option value="">Select...</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Technologies (comma separated):</label>
-                <input type="text" name="technologies" placeholder="JavaScript, React, Node.js">
-            </div>
-            
-            <div class="form-group">
-                <label>Experience:</label>
-                <select name="experience">
-                    <option value="">Select...</option>
-                    <option value="none">No experience</option>
-                    <option value="internship">Internship</option>
-                    <option value="1-2">1-2 years</option>
-                    <option value="3+">3+ years</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Time Commitment:</label>
-                <select name="timeCommitment">
-                    <option value="">Select...</option>
-                    <option value="5-10">5-10 hours</option>
-                    <option value="10-20">10-20 hours</option>
-                    <option value="20-30">20-30 hours</option>
-                    <option value="30+">30+ hours</option>
-                </select>
-            </div>
-            
-            <button type="button" onclick="testSubmitAnswers()">Submit Answers</button>
-        </form>
+    <!-- Step 1: Get Questions -->
+    <div class="section">
+        <h2>📝 Step 1: Get Questions</h2>
+        <button onclick="getQuestions()">Load Questions</button>
+        <div id="questionsResult" class="result"></div>
+        
+        <!-- Questions Form -->
+        <div id="questionsForm" style="display: none;">
+            <h3>Answer the Questions:</h3>
+            <form id="answersForm">
+                <div id="questionFields"></div>
+                <button type="button" onclick="submitAnswers()">Submit Answers</button>
+            </form>
+        </div>
         <div id="answersResult" class="result"></div>
+    </div>
+
+    <!-- Step 2: Upload Resume -->
+    <div class="section">
+        <h2>📄 Step 2: Upload Resume</h2>
+        <div class="file-input" onclick="document.getElementById('resumeFile').click()">
+            <input type="file" id="resumeFile" accept=".pdf,.doc,.docx" style="display: none;" onchange="handleFileSelect(this)">
+            <p>📁 Click to select resume file (PDF, DOC, DOCX)</p>
+            <p id="selectedFileName" style="font-weight: bold; color: #007bff;"></p>
+        </div>
+        <button id="uploadBtn" onclick="uploadResume()" disabled>Upload Resume</button>
+        <div id="uploadResult" class="result"></div>
+    </div>
+
+    <!-- Step 3: Generate Dynamic Questions -->
+    <div class="section">
+        <h2>🤖 Step 3: Generate AI Questions</h2>
+        <button id="generateBtn" onclick="generateDynamicQuestions()" disabled>Generate Dynamic Questions</button>
+        <div id="dynamicResult" class="result"></div>
+    </div>
+
+    <!-- Final Analysis -->
+    <div class="section">
+        <h2>🎯 Final Analysis Summary</h2>
+        <div id="finalAnalysis" class="result">Complete all steps above to see the final analysis...</div>
     </div>
 
     <script>
         const API_BASE = 'http://localhost:3000/api';
+        let currentSessionId = null;
+        let questionsData = null;
 
-        async function testGetQuestions() {
+        // Step 1: Get Questions
+        async function getQuestions() {
             try {
+                updateStatus('step1Status', 'pending', 'Step 1: Loading Questions...');
+                
                 const response = await fetch(`${API_BASE}/questions`);
                 const data = await response.json();
-                document.getElementById('questionsResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    questionsData = data.data;
+                    document.getElementById('questionsResult').textContent = JSON.stringify(data, null, 2);
+                    renderQuestionsForm(questionsData);
+                    updateStatus('step1Status', 'complete', 'Step 1: Questions Loaded ✅');
+                } else {
+                    throw new Error(data.message);
+                }
             } catch (error) {
                 document.getElementById('questionsResult').textContent = 'Error: ' + error.message;
+                updateStatus('step1Status', 'error', 'Step 1: Failed to load questions ❌');
             }
         }
 
-        async function testSubmitAnswers() {
+        function renderQuestionsForm(questions) {
+            const container = document.getElementById('questionFields');
+            container.innerHTML = '';
+            
+            questions.forEach((question, index) => {
+                const fieldDiv = document.createElement('div');
+                fieldDiv.className = 'form-group';
+                
+                let fieldHTML = `<label>${question.title}</label>`;
+                
+                if (question.type === 'radio') {
+                    question.options.forEach(option => {
+                        const value = typeof option === 'object' ? option.value : option;
+                        const label = typeof option === 'object' ? option.label : option;
+                        fieldHTML += `
+                            <div class="checkbox-item">
+                                <input type="radio" name="${question.id}" value="${value}" id="${question.id}_${value}">
+                                <label for="${question.id}_${value}">${label}</label>
+                            </div>
+                        `;
+                    });
+                } else if (question.type === 'checkbox') {
+                    fieldHTML += '<div class="checkbox-group">';
+                    question.options.forEach(option => {
+                        fieldHTML += `
+                            <div class="checkbox-item">
+                                <input type="checkbox" name="${question.id}" value="${option}" id="${question.id}_${option}">
+                                <label for="${question.id}_${option}">${option}</label>
+                            </div>
+                        `;
+                    });
+                    fieldHTML += '</div>';
+                } else if (question.type === 'textarea') {
+                    fieldHTML += `<textarea name="${question.id}" rows="4" placeholder="${question.placeholder || ''}"></textarea>`;
+                }
+                
+                fieldDiv.innerHTML = fieldHTML;
+                container.appendChild(fieldDiv);
+            });
+            
+            document.getElementById('questionsForm').style.display = 'block';
+        }
+
+        // Submit Answers
+        async function submitAnswers() {
             try {
+                updateStatus('step1Status', 'pending', 'Step 1: Submitting Answers...');
+                
                 const form = document.getElementById('answersForm');
                 const formData = new FormData(form);
                 
-                // Convert form data to object
                 const answers = {};
                 for (let [key, value] of formData.entries()) {
-                    if (key === 'technologies') {
-                        // Convert comma-separated string to array
-                        answers[key] = value.split(',').map(tech => tech.trim()).filter(tech => tech);
+                    if (answers[key]) {
+                        if (Array.isArray(answers[key])) {
+                            answers[key].push(value);
+                        } else {
+                            answers[key] = [answers[key], value];
+                        }
                     } else {
                         answers[key] = value;
                     }
@@ -144,18 +272,146 @@
 
                 const response = await fetch(`${API_BASE}/answers`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(answers)
                 });
                 
                 const data = await response.json();
                 document.getElementById('answersResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    updateStatus('step1Status', 'complete', 'Step 1: Answers Submitted ✅');
+                    // Enable resume upload
+                    document.getElementById('uploadBtn').disabled = false;
+                } else {
+                    throw new Error(data.message);
+                }
             } catch (error) {
                 document.getElementById('answersResult').textContent = 'Error: ' + error.message;
+                updateStatus('step1Status', 'error', 'Step 1: Failed to submit answers ❌');
             }
         }
+
+        // File Selection
+        function handleFileSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                document.getElementById('selectedFileName').textContent = `Selected: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        }
+
+        // Step 2: Upload Resume
+        async function uploadResume() {
+            try {
+                updateStatus('step2Status', 'pending', 'Step 2: Uploading Resume...');
+                
+                const fileInput = document.getElementById('resumeFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    throw new Error('Please select a resume file');
+                }
+
+                const formData = new FormData();
+                formData.append('resume', file);
+
+                const response = await fetch(`${API_BASE}/upload-resume`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                document.getElementById('uploadResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    currentSessionId = data.sessionId;
+                    updateStatus('step2Status', 'complete', 'Step 2: Resume Uploaded ✅');
+                    // Enable dynamic questions generation
+                    document.getElementById('generateBtn').disabled = false;
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                document.getElementById('uploadResult').textContent = 'Error: ' + error.message;
+                updateStatus('step2Status', 'error', 'Step 2: Failed to upload resume ❌');
+            }
+        }
+
+        // Step 3: Generate Dynamic Questions
+        async function generateDynamicQuestions() {
+            try {
+                updateStatus('step3Status', 'pending', 'Step 3: Generating AI Questions...');
+                
+                if (!currentSessionId) {
+                    throw new Error('No session ID found. Please upload resume first.');
+                }
+
+                // Get the submitted answers
+                const form = document.getElementById('answersForm');
+                const formData = new FormData(form);
+                const questionAnswers = {};
+                
+                for (let [key, value] of formData.entries()) {
+                    if (questionAnswers[key]) {
+                        if (Array.isArray(questionAnswers[key])) {
+                            questionAnswers[key].push(value);
+                        } else {
+                            questionAnswers[key] = [questionAnswers[key], value];
+                        }
+                    } else {
+                        questionAnswers[key] = value;
+                    }
+                }
+
+                const response = await fetch(`${API_BASE}/generate-questions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        questionAnswers: questionAnswers
+                    })
+                });
+                
+                const data = await response.json();
+                document.getElementById('dynamicResult').textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    updateStatus('step3Status', 'complete', 'Step 3: Dynamic Questions Generated ✅');
+                    // Show final analysis
+                    showFinalAnalysis(data.data);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                document.getElementById('dynamicResult').textContent = 'Error: ' + error.message;
+                updateStatus('step3Status', 'error', 'Step 3: Failed to generate questions ❌');
+            }
+        }
+
+        function showFinalAnalysis(data) {
+            const analysis = {
+                completed_at: new Date().toISOString(),
+                session_id: currentSessionId,
+                combined_analysis: data.combinedAnalysis,
+                dynamic_questions_count: data.dynamicQuestions.length,
+                dynamic_questions: data.dynamicQuestions
+            };
+            
+            document.getElementById('finalAnalysis').textContent = JSON.stringify(analysis, null, 2);
+        }
+
+        function updateStatus(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.className = `status ${type}`;
+            element.textContent = message;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Profile Analysis Test Suite Loaded');
+            console.log('📍 API Base URL:', API_BASE);
+        });
     </script>
 </body>
 </html>
