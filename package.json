@@ -17,6 +17,7 @@
     "@prisma/client": "^6.14.0",
     "@types/cors": "^2.8.19",
     "@types/morgan": "^1.9.10",
+    "axios": "^1.11.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",

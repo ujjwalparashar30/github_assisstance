@@ -9,25 +9,28 @@ export class GeminiService {
     this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
   }
 
+  /**
+   * Phase 1/2 → Analyze resume + initial Q&A
+   */
   async analyzeResume(resumeText: string, questionAnswers: any): Promise<any> {
     const prompt = `
-    Analyze the following resume and question answers to provide insights:
-    
-    RESUME CONTENT:
-    ${resumeText}
-    
-    QUESTION ANSWERS:
-    ${JSON.stringify(questionAnswers, null, 2)}
-    
-    Please provide a detailed analysis in JSON format with:
-    1. Skills extracted from resume
-    2. Experience level
-    3. Education background
-    4. Key achievements
-    5. Areas for improvement
-    6. Alignment with stated goals from questions
-    
-    Return only valid JSON.
+      Analyze the following resume and question answers:
+
+      RESUME CONTENT:
+      ${resumeText.substring(0, 2000)}
+
+      QUESTION ANSWERS:
+      ${JSON.stringify(questionAnswers, null, 2)}
+
+      Return JSON with:
+      {
+        "skills": [...],
+        "experienceLevel": "Beginner|Intermediate|Advanced",
+        "education": "...",
+        "achievements": [...],
+        "areasForImprovement": [...],
+        "goalAlignment": "..."
+      }
     `;
 
     try {
@@ -39,30 +42,33 @@ export class GeminiService {
     }
   }
 
+  /**
+   * Phase 2 → Generate 10 dynamic follow-up questions
+   */
   async generateDynamicQuestions(combinedAnalysis: any): Promise<any> {
     const prompt = `
-    Based on the following combined analysis of user's answers and resume, generate 10 personalized follow-up questions:
-    
-    ANALYSIS DATA:
-    ${JSON.stringify(combinedAnalysis, null, 2)}
-    
-    Generate questions that are:
-    1. Relevant to their stated goals and current skill level
-    2. Help identify specific areas for improvement
-    3. Understand their career preferences better
-    4. Mix of technical and behavioral questions
-    
-    Return in this JSON format:
-    {
-      "questions": [
-        {
-          "id": "q1",
-          "question": "Question text here",
-          "type": "radio|checkbox|textarea",
-          "options": ["option1", "option2"] // if applicable
-        }
-      ]
-    }
+      Based on the following combined analysis of user's answers and resume, 
+      generate 10 personalized follow-up questions:
+
+      ANALYSIS DATA:
+      ${JSON.stringify(combinedAnalysis, null, 2)}
+
+      Requirements:
+      - Relevant to skills & goals
+      - Mix of technical and behavioral
+      - Questions should capture depth (not only basics)
+      
+      Return JSON:
+      {
+        "questions": [
+          {
+            "id": "dq1",
+            "question": "Question text here",
+            "type": "radio|checkbox|textarea",
+            "options": ["option1","option2"] // if applicable
+          }
+        ]
+      }
     `;
 
     try {
@@ -71,6 +77,35 @@ export class GeminiService {
       return JSON.parse(response.text());
     } catch (error) {
       throw new Error(`Dynamic question generation failed: ${error}`);
+    }
+  }
+
+  /**
+   * Phase 3 → Final consolidated analysis (used before GitHub fetch)
+   */
+  async getFinalAnalysis({ resumeText, phase1Answers, dynamicAnswers }: any) {
+    const prompt = `
+      You are assessing a developer. Use their resume + all answers.
+
+      Resume: ${resumeText.substring(0, 2000)}
+      Initial Answers: ${JSON.stringify(phase1Answers, null, 2)}
+      Dynamic Answers: ${JSON.stringify(dynamicAnswers, null, 2)}
+
+      Return JSON:
+      {
+        "skillLevel": "Beginner|Intermediate|Advanced",
+        "skills": [...],
+        "recommendations": [...],
+        "keywords": ["javascript","react","good first issue"] // for GitHub search
+      }
+    `;
+
+    try {
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      return JSON.parse(response.text());
+    } catch (error) {
+      throw new Error(`Final analysis failed: ${error}`);
     }
   }
 }

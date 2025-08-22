@@ -2,8 +2,10 @@ import { Request, Response } from 'express';
 import { questions } from '../data/questions';
 import { ResumeParser } from '../utils/resumeParser';
 import { GeminiService } from '../services/geminiService';
+import { GitHubService } from '../services/githubService';
 
 const geminiService = new GeminiService();
+const githubService = new GitHubService();
 
 // Store user sessions (in production, use Redis or database)
 const userSessions: { [key: string]: any } = {};
@@ -126,76 +128,153 @@ export const uploadResume = async (req: Request, res: Response) => {
   }
 };
 
+// export const generateDynamicQuestions = async (req: Request, res: Response) => {
+//   try {
+//     console.log('📥 Received request:', req.body);
+    
+//     const { sessionId, questionAnswers } = req.body;
+    
+//     if (!sessionId || !userSessions[sessionId]) {
+//       console.log('❌ Invalid session:', sessionId);
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid session or resume not found"
+//       });
+//     }
+
+//     console.log('✅ Session found:', sessionId);
+//     const { resumeText } = userSessions[sessionId];
+//     console.log('📄 Resume text length:', resumeText?.length || 0);
+    
+//     // For now, let's skip Gemini and return mock data to test the flow
+//     const mockAnalysis = {
+//       skills: ['JavaScript', 'React', 'Node.js'],
+//       experience: 'Mid-level',
+//       recommendations: ['Learn TypeScript', 'Practice system design']
+//     };
+
+//     const mockQuestions = {
+//       questions: [
+//         {
+//           id: "q1",
+//           question: "What specific JavaScript frameworks would you like to master next?",
+//           type: "checkbox",
+//           options: ["Vue.js", "Angular", "Svelte", "Next.js"]
+//         },
+//         {
+//           id: "q2", 
+//           question: "How comfortable are you with system design concepts?",
+//           type: "radio",
+//           options: [
+//             { value: "beginner", label: "Just starting to learn" },
+//             { value: "intermediate", label: "Can design simple systems" },
+//             { value: "advanced", label: "Can design complex distributed systems" }
+//           ]
+//         }
+//       ]
+//     };
+
+//     console.log('✅ Sending mock response');
+    
+//     res.json({
+//       success: true,
+//       data: {
+//         combinedAnalysis: {
+//           questionAnswers,
+//           resumeAnalysis: mockAnalysis,
+//           timestamp: new Date().toISOString()
+//         },
+//         dynamicQuestions: mockQuestions.questions
+//       },
+//       message: "Dynamic questions generated successfully (MOCK DATA)"
+//     });
+
+//   } catch (error) {
+//     console.error('💥 Error in generateDynamicQuestions:', error);
+//     console.error('Stack trace:', error instanceof Error ? error.stack : error);
+    
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to generate dynamic questions",
+//       error: error instanceof Error ? error.message : 'Unknown error',
+//       debug: process.env.NODE_ENV === 'development' ? error : undefined
+//     });
+//   }
+// };
+
 export const generateDynamicQuestions = async (req: Request, res: Response) => {
   try {
-    console.log('📥 Received request:', req.body);
-    
     const { sessionId, questionAnswers } = req.body;
-    
     if (!sessionId || !userSessions[sessionId]) {
-      console.log('❌ Invalid session:', sessionId);
       return res.status(400).json({
         success: false,
         message: "Invalid session or resume not found"
       });
     }
 
-    console.log('✅ Session found:', sessionId);
     const { resumeText } = userSessions[sessionId];
-    console.log('📄 Resume text length:', resumeText?.length || 0);
-    
-    // For now, let's skip Gemini and return mock data to test the flow
-    const mockAnalysis = {
-      skills: ['JavaScript', 'React', 'Node.js'],
-      experience: 'Mid-level',
-      recommendations: ['Learn TypeScript', 'Practice system design']
-    };
 
-    const mockQuestions = {
-      questions: [
-        {
-          id: "q1",
-          question: "What specific JavaScript frameworks would you like to master next?",
-          type: "checkbox",
-          options: ["Vue.js", "Angular", "Svelte", "Next.js"]
-        },
-        {
-          id: "q2", 
-          question: "How comfortable are you with system design concepts?",
-          type: "radio",
-          options: [
-            { value: "beginner", label: "Just starting to learn" },
-            { value: "intermediate", label: "Can design simple systems" },
-            { value: "advanced", label: "Can design complex distributed systems" }
-          ]
-        }
-      ]
-    };
+    // Phase 2 → Send to Gemini to generate dynamic questions
+    const geminiResponse = await geminiService.generateDynamicQuestions({
+      resumeText,
+      questionAnswers
+    });
 
-    console.log('✅ Sending mock response');
-    
+    // Store for phase 3
+    userSessions[sessionId].phase1Answers = questionAnswers;
+    userSessions[sessionId].dynamicQuestions = geminiResponse.dynamicQuestions;
+
     res.json({
       success: true,
-      data: {
-        combinedAnalysis: {
-          questionAnswers,
-          resumeAnalysis: mockAnalysis,
-          timestamp: new Date().toISOString()
-        },
-        dynamicQuestions: mockQuestions.questions
-      },
-      message: "Dynamic questions generated successfully (MOCK DATA)"
+      data: geminiResponse,
+      message: "Dynamic questions generated successfully"
     });
 
   } catch (error) {
-    console.error('💥 Error in generateDynamicQuestions:', error);
-    console.error('Stack trace:', error instanceof Error ? error.stack : error);
-    
     res.status(500).json({
       success: false,
       message: "Failed to generate dynamic questions",
-      error: error instanceof Error ? error.message : 'Unknown error',
-      debug: process.env.NODE_ENV === 'development' ? error : undefined
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+export const finalizeAnalysis = async (req: Request, res: Response) => {
+  try {
+    const { sessionId, dynamicAnswers } = req.body;
+    if (!sessionId || !userSessions[sessionId]) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid session"
+      });
+    }
+
+    const { resumeText, phase1Answers } = userSessions[sessionId];
+
+    // Phase 3 → Send everything to Gemini
+    const finalAnalysis = await geminiService.getFinalAnalysis({
+      resumeText,
+      phase1Answers,
+      dynamicAnswers
+    });
+
+    // Use keywords + skill level to fetch GitHub repos/issues
+    const githubIssues = await githubService.fetchRecommendedIssues(finalAnalysis.keywords, finalAnalysis.skillLevel);
+
+    res.json({
+      success: true,
+      data: {
+        finalAnalysis,
+        githubIssues
+      },
+      message: "Final analysis completed"
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to finalize analysis",
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 };
