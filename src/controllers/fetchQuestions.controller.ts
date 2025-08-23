@@ -3,14 +3,12 @@ import { questions } from '../data/questions';
 import { ResumeParser } from '../utils/resumeParser';
 import { GeminiService } from '../services/geminiService';
 import { GitHubService } from '../services/githubService';
+import { getSessionFromRequest } from '../middlewares/sessionMiddleware';
 
 const geminiService = new GeminiService();
 const githubService = new GitHubService();
 
-// Store user sessions (in production, use Redis or database)
-const userSessions: { [key: string]: any } = {};
-
-export const getQuestions = (req: Request, res: Response) => {
+export const getQuestions = (req: Request, res: Response): void => {
   try {
     res.json({
       success: true,
@@ -25,8 +23,9 @@ export const getQuestions = (req: Request, res: Response) => {
   }
 };
 
-export const submitAnswers = (req: Request, res: Response) => {
+export const submitAnswers = async (req: Request, res: Response): Promise<void> => {
   try {
+    const session = await getSessionFromRequest(req, res);
     const userAnswers = req.body;
     
     // Create structured JSON with questions and their answers
@@ -36,7 +35,6 @@ export const submitAnswers = (req: Request, res: Response) => {
       let selectedOptions;
       
       if (question.type === 'radio' && question.options) {
-        // Check if options are objects with value/label or just strings
         if (typeof question.options[0] === 'object') {
           const optionObjects = question.options as { value: string; label: string }[];
           selectedOptions = optionObjects.find(opt => opt.value === userAnswer)?.label || userAnswer;
@@ -58,57 +56,62 @@ export const submitAnswers = (req: Request, res: Response) => {
       };
     });
 
-    // Store this formatted response for later use with resume analysis
+    // Store this formatted response in session
     const analysisData = {
+      guestId: session.guestId,
       timestamp: new Date().toISOString(),
       questionsAndAnswers: formattedResponse,
       rawAnswers: userAnswers
     };
 
+    // Update session progress
+    session.assessmentProgress!.phase1Complete = true;
+    await session.save();
+
     res.json({
       success: true,
       data: analysisData,
+      sessionId: session.guestId, // Keep this for frontend compatibility
       message: "Answers submitted successfully",
       nextStep: "Please upload your resume for analysis"
     });
     
   } catch (error) {
+    console.error("Error in submitAnswers:", error);
     res.status(500).json({
       success: false,
-      message: "Failed to process answers"
+      message: error
     });
   }
 };
 
-
-export const uploadResume = async (req: Request, res: Response) => {
+export const uploadResume = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "No resume file uploaded"
       });
+      return;
     }
 
+    const session = await getSessionFromRequest(req, res);
+    
     // Extract text from resume
     const resumeText = await ResumeParser.extractTextFromFile(req.file.path);
     
-    // Generate session ID (in production, use proper session management)
-    const sessionId = Date.now().toString();
-    
-    // Store resume data in session
-    userSessions[sessionId] = {
-      resumeText,
-      resumePath: req.file.path,
-      uploadedAt: new Date().toISOString()
-    };
+    // Store in session instead of userSessions memory
+    session.resumeText = resumeText;
+    session.resumePath = req.file.path;
+    session.uploadedAt = new Date().toISOString();
+    await session.save();
 
     // Clean up file after processing
     ResumeParser.cleanupFile(req.file.path);
 
     res.json({
       success: true,
-      sessionId,
+      sessionId: session.guestId,
       message: "Resume uploaded and processed successfully",
       resumePreview: resumeText.substring(0, 200) + "...",
       nextStep: "Ready to combine with question answers for final analysis"
@@ -128,101 +131,29 @@ export const uploadResume = async (req: Request, res: Response) => {
   }
 };
 
-// export const generateDynamicQuestions = async (req: Request, res: Response) => {
-//   try {
-//     console.log('📥 Received request:', req.body);
-    
-//     const { sessionId, questionAnswers } = req.body;
-    
-//     if (!sessionId || !userSessions[sessionId]) {
-//       console.log('❌ Invalid session:', sessionId);
-//       return res.status(400).json({
-//         success: false,
-//         message: "Invalid session or resume not found"
-//       });
-//     }
-
-//     console.log('✅ Session found:', sessionId);
-//     const { resumeText } = userSessions[sessionId];
-//     console.log('📄 Resume text length:', resumeText?.length || 0);
-    
-//     // For now, let's skip Gemini and return mock data to test the flow
-//     const mockAnalysis = {
-//       skills: ['JavaScript', 'React', 'Node.js'],
-//       experience: 'Mid-level',
-//       recommendations: ['Learn TypeScript', 'Practice system design']
-//     };
-
-//     const mockQuestions = {
-//       questions: [
-//         {
-//           id: "q1",
-//           question: "What specific JavaScript frameworks would you like to master next?",
-//           type: "checkbox",
-//           options: ["Vue.js", "Angular", "Svelte", "Next.js"]
-//         },
-//         {
-//           id: "q2", 
-//           question: "How comfortable are you with system design concepts?",
-//           type: "radio",
-//           options: [
-//             { value: "beginner", label: "Just starting to learn" },
-//             { value: "intermediate", label: "Can design simple systems" },
-//             { value: "advanced", label: "Can design complex distributed systems" }
-//           ]
-//         }
-//       ]
-//     };
-
-//     console.log('✅ Sending mock response');
-    
-//     res.json({
-//       success: true,
-//       data: {
-//         combinedAnalysis: {
-//           questionAnswers,
-//           resumeAnalysis: mockAnalysis,
-//           timestamp: new Date().toISOString()
-//         },
-//         dynamicQuestions: mockQuestions.questions
-//       },
-//       message: "Dynamic questions generated successfully (MOCK DATA)"
-//     });
-
-//   } catch (error) {
-//     console.error('💥 Error in generateDynamicQuestions:', error);
-//     console.error('Stack trace:', error instanceof Error ? error.stack : error);
-    
-//     res.status(500).json({
-//       success: false,
-//       message: "Failed to generate dynamic questions",
-//       error: error instanceof Error ? error.message : 'Unknown error',
-//       debug: process.env.NODE_ENV === 'development' ? error : undefined
-//     });
-//   }
-// };
-
-export const generateDynamicQuestions = async (req: Request, res: Response) => {
+export const generateDynamicQuestions = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { sessionId, questionAnswers } = req.body;
-    if (!sessionId || !userSessions[sessionId]) {
-      return res.status(400).json({
+    const session = await getSessionFromRequest(req, res);
+    const { questionAnswers } = req.body;
+    
+    if (!session.resumeText) {
+      res.status(400).json({
         success: false,
-        message: "Invalid session or resume not found"
+        message: "Resume not found in session"
       });
+      return;
     }
-
-    const { resumeText } = userSessions[sessionId];
 
     // Phase 2 → Send to Gemini to generate dynamic questions
     const geminiResponse = await geminiService.generateDynamicQuestions({
-      resumeText,
+      resumeText: session.resumeText,
       questionAnswers
     });
 
-    // Store for phase 3
-    userSessions[sessionId].phase1Answers = questionAnswers;
-    userSessions[sessionId].dynamicQuestions = geminiResponse.dynamicQuestions;
+    // Store for phase 3 in session
+    session.phase1Answers = questionAnswers;
+    session.dynamicQuestions = geminiResponse.dynamicQuestions;
+    await session.save();
 
     res.json({
       success: true,
@@ -239,27 +170,31 @@ export const generateDynamicQuestions = async (req: Request, res: Response) => {
   }
 };
 
-export const finalizeAnalysis = async (req: Request, res: Response) => {
+export const finalizeAnalysis = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { sessionId, dynamicAnswers } = req.body;
-    if (!sessionId || !userSessions[sessionId]) {
-      return res.status(400).json({
+    const session = await getSessionFromRequest(req, res);
+    const { dynamicAnswers } = req.body;
+    
+    if (!session.resumeText || !session.phase1Answers) {
+      res.status(400).json({
         success: false,
-        message: "Invalid session"
+        message: "Missing session data"
       });
+      return;
     }
-
-    const { resumeText, phase1Answers } = userSessions[sessionId];
 
     // Phase 3 → Send everything to Gemini
     const finalAnalysis = await geminiService.getFinalAnalysis({
-      resumeText,
-      phase1Answers,
+      resumeText: session.resumeText,
+      phase1Answers: session.phase1Answers,
       dynamicAnswers
     });
 
     // Use keywords + skill level to fetch GitHub repos/issues
-    const githubIssues = await githubService.fetchRecommendedIssues(finalAnalysis.keywords, finalAnalysis.skillLevel);
+    const githubIssues = await githubService.fetchRecommendedIssues(
+      finalAnalysis.keywords, 
+      finalAnalysis.skillLevel
+    );
 
     res.json({
       success: true,
