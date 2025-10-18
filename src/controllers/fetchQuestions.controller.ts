@@ -4,6 +4,7 @@ import { ResumeParser } from '../utils/resumeParser';
 import { GeminiService } from '../services/geminiService';
 import { GitHubService } from '../services/githubService';
 import { getSessionFromRequest } from '../middlewares/sessionMiddleware';
+import prisma from '../../prisma/prisma';
 
 const geminiService = new GeminiService();
 const githubService = new GitHubService();
@@ -87,8 +88,15 @@ export const submitAnswers = async (req: Request, res: Response): Promise<void> 
 
 export const uploadResume = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log('=== UPLOAD RESUME DEBUG ===');
+    console.log('Headers:', req.headers);
+    console.log('Content-Type:', req.headers['content-type']);
+    console.log('File object:', req.file);
+    console.log('Body:', req.body);
+    console.log('============================');
     
     if (!req.file) {
+      console.log('❌ No file found in request');
       res.status(400).json({
         success: false,
         message: "No resume file uploaded"
@@ -96,29 +104,52 @@ export const uploadResume = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    const session = await getSessionFromRequest(req, res);
-    
-    // Extract text from resume
-    const resumeText = await ResumeParser.extractTextFromFile(req.file.path);
-    
-    // Store in session instead of userSessions memory
-    session.resumeText = resumeText;
-    session.resumePath = req.file.path;
-    session.uploadedAt = new Date().toISOString();
-    await session.save();
+    console.log('✅ File received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path
+    });
 
-    // Clean up file after processing
-    ResumeParser.cleanupFile(req.file.path);
+   const session = await getSessionFromRequest(req, res);
+
+const resume = await prisma.resume.create({
+  data: {
+    guestId: session.guestId!,
+    originalName: req.file.originalname,
+    storedName: req.file.filename,
+    resumeText: await ResumeParser.extractTextFromFile(req.file.path),
+  },
+});
+
+// Save only reference in session
+session.resumeId = resume.id;
+if ( session.assessmentProgress)
+session.assessmentProgress.phase1Complete = true;
+await session.save();
+    
+    // // Extract text from resume
+    // const resumeText = await ResumeParser.extractTextFromFile(req.file.path);
+    
+    // // Store in session instead of userSessions memory
+    // session.resumeText = resumeText;
+    // session.resumePath = req.file.path;
+    // session.uploadedAt = new Date().toISOString();
+    // await session.save();
+
+    // // Clean up file after processing
+    // ResumeParser.cleanupFile(req.file.path);
 
     res.json({
       success: true,
-      sessionId: session.guestId,
-      message: "Resume uploaded and processed successfully",
-      resumePreview: resumeText.substring(0, 200) + "...",
-      nextStep: "Ready to combine with question answers for final analysis"
+      message: 'Resume uploaded successfully',
+      resumePreview: `/uploads/resumes/${req.file.filename}`,
+      nextStep: 'match-issues',
     });
 
+
   } catch (error) {
+    console.error('❌ Upload error:', error);
     // Clean up file on error
     if (req.file?.path) {
       ResumeParser.cleanupFile(req.file.path);
@@ -135,19 +166,25 @@ export const uploadResume = async (req: Request, res: Response): Promise<void> =
 export const generateDynamicQuestions = async (req: Request, res: Response): Promise<void> => {
   try {
     const session = await getSessionFromRequest(req, res);
+    const resume = await prisma.resume.findFirst({
+      where: {
+        guestId: session.guestId!,
+      },
+    });
     const { questionAnswers } = req.body;
     
-    if (!session.resumeText) {
+    if (!resume || !resume.resumeText) {
       res.status(400).json({
         success: false,
         message: "Resume not found in session"
       });
       return;
     }
-
+    console.log("Resume text length:", resume.resumeText.length);
+    console.log("sendimg to Gemini:", { questionAnswers });
     // Phase 2 → Send to Gemini to generate dynamic questions
     const geminiResponse = await geminiService.generateDynamicQuestions({
-      resumeText: session.resumeText,
+      resumeText: resume.resumeText,
       questionAnswers
     });
 

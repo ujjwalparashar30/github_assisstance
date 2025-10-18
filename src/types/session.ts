@@ -13,6 +13,7 @@ export interface SessionData {
   };
   isGuest: boolean;
   isLoggedIn: boolean;
+  resumeId?: number; // Reference to resume in DB
 }
 
 export interface SessionOptions {

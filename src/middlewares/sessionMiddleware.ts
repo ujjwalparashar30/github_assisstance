@@ -21,15 +21,14 @@ export async function getSessionFromRequest(req: Request, res: Response): Promis
   
   // Auto-create guest session if none exists
   if (!session.guestId && !session.userId) {
-    session.guestId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-    session.isGuest = true;
-    session.isLoggedIn = false;
-    session.assessmentProgress = {
-      phase1Complete: false,
-      phase2Complete: false,
-      phase3Complete: false,
-    };
-    await session.save();
+    session.guestId = session.guestId || Date.now().toString();
+session.assessmentProgress = {
+  phase1Complete: true,
+  phase2Complete: false,
+  phase3Complete: false,
+};
+
+await session.save();
   }
   
   return session;
