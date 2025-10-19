@@ -9,11 +9,22 @@ datasource db {
 
 
 model Resume {
-  id          Int      @id @default(autoincrement())
-  guestId     String   // optional if user not logged in
+  id           Int       @id @default(autoincrement())
+  guestId      String
   originalName String
-  storedName  String
-  resumeText  String?   // parsed text
-  uploadedAt  DateTime  @default(now())
+  storedName   String
+  resumeText   String?
+  uploadedAt   DateTime  @default(now())
+  questionSets DynamicQuestionSet[]
 }
+
+model DynamicQuestionSet {
+  id          Int       @id @default(autoincrement())
+  resumeId    Int
+  questions   Json
+  createdAt   DateTime  @default(now())
+
+  Resume      Resume    @relation(fields: [resumeId], references: [id])
+}
+
 

@@ -5,7 +5,7 @@ export interface SessionData {
   resumePath?: string;
   uploadedAt?: string;
   phase1Answers?: any;
-  dynamicQuestions?: any;
+  dynamicQuestionsId?: any;
   assessmentProgress?: {
     phase1Complete: boolean;
     phase2Complete: boolean;
