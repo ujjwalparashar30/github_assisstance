@@ -50,7 +50,7 @@ export class GeminiService {
 Analyze the following resume and question answers:
 
 RESUME CONTENT:
-${resumeText.substring(0, 2000)}
+${resumeText.substring(0, 20000)}
 
 QUESTION ANSWERS:
 ${JSON.stringify(questionAnswers, null, 2)}
@@ -107,7 +107,7 @@ Return JSON:
     try {
       const result = await this.model.generateContent(prompt);
       const raw = await this.extractTextFromResult(result);
-      console.log("Gemini raw generateDynamicQuestions:", raw.slice(0, 1000));
+      console.log("Gemini raw generateDynamicQuestions:", raw.slice(0, 10000));
       const parsed = this.safeParseJSON(raw, "generateDynamicQuestions");
       return parsed;
     } catch (error: any) {

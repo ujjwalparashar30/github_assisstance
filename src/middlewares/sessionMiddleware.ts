@@ -28,7 +28,7 @@ session.assessmentProgress = {
   phase3Complete: false,
 };
 
-await session.save();
+    await session.save();
   }
   
   return session;

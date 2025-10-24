@@ -4,7 +4,7 @@ import { ResumeParser } from "../utils/resumeParser";
 import { GeminiService } from "../services/geminiService";
 import { GitHubService } from "../services/githubService";
 import { getSessionFromRequest } from "../middlewares/sessionMiddleware";
-import prisma from "../../prisma/prisma";
+import prisma from "../lib/prisma";
 
 const geminiService = new GeminiService();
 const githubService = new GitHubService();
